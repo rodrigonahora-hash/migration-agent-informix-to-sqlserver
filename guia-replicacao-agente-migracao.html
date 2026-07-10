@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guia de Replicação — Agente de Migração Informix → SQL Server</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface2: #1e222b;
+    --border: #2a2f3a;
+    --ink: #e8ecf2;
+    --muted: #9098a6;
+    --accent: #4dd4ac;
+    --accent2: #7c9cff;
+    --accent3: #ffb454;
+    --red: #ff6b6b;
+    --green: #51cf66;
+    --yellow: #ffd43b;
+    --code-bg: #0b0d11;
+    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 15px; line-height: 1.7;
+  }
+
+  /* HEADER */
+  header {
+    padding: 3.5rem 2rem 3rem;
+    background:
+      radial-gradient(ellipse 70% 50% at 30% 0%, rgba(77,212,172,0.10), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 20%, rgba(124,156,255,0.08), transparent);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-inner { max-width: 900px; margin: 0 auto; }
+  .kicker {
+    font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 1rem;
+  }
+  header h1 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800;
+    line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 1rem;
+  }
+  header h1 span { color: var(--accent); }
+  header .sub { color: var(--muted); font-size: 1.05rem; max-width: 640px; }
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 2rem;
+    font-size: 0.82rem; color: var(--muted);
+  }
+  .meta-row b { color: var(--ink); font-weight: 600; }
+
+  /* LAYOUT */
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 2rem; }
+
+  /* TOC */
+  .toc {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem 1.75rem; margin: 2.5rem auto;
+  }
+  .toc h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 1rem; }
+  .toc ol { list-style: none; counter-reset: toc; }
+  .toc li { counter-increment: toc; padding: 5px 0; font-size: 0.9rem; display: flex; gap: 0.75rem; align-items: baseline; }
+  .toc li::before { content: counter(toc, decimal-leading-zero); font-family: var(--mono); font-size: 0.75rem; color: var(--accent); }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  /* SECTIONS */
+  section { padding: 2.5rem 0; border-top: 1px solid var(--border); }
+  .sec-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+  .sec-num {
+    flex-shrink: 0; width: 42px; height: 42px; border-radius: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-weight: 700; color: var(--accent); font-size: 0.95rem;
+  }
+  .sec-head h2 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.01em; }
+  .sec-head .tag { font-size: 0.72rem; color: var(--muted); font-family: var(--mono); }
+
+  h3 { font-size: 1.05rem; font-weight: 650; margin: 1.75rem 0 0.75rem; color: var(--ink); }
+  h4 { font-size: 0.92rem; font-weight: 600; margin: 1.25rem 0 0.5rem; color: var(--accent2); }
+  p { margin: 0.6rem 0; color: #d3d9e2; }
+  ul, ol { margin: 0.6rem 0 0.6rem 1.2rem; }
+  li { margin: 0.35rem 0; color: #d3d9e2; }
+  strong { color: var(--ink); font-weight: 650; }
+  code.inline {
+    font-family: var(--mono); font-size: 0.85em;
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 1px 6px; border-radius: 5px; color: var(--accent);
+  }
+
+  /* CODE BLOCKS */
+  .code {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; margin: 1rem 0; overflow: hidden;
+  }
+  .code-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 14px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  }
+  .code-bar .lang { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em; }
+  .code-bar .file { font-family: var(--mono); font-size: 0.7rem; color: var(--accent2); }
+  .code pre {
+    padding: 1rem 1.25rem; overflow-x: auto;
+    font-family: var(--mono); font-size: 0.8rem; line-height: 1.65; color: #d8dee9;
+  }
+  .code pre .c { color: #6b7280; font-style: italic; }
+  .code pre .k { color: #ff7b9c; }
+  .code pre .s { color: #a3e4a3; }
+  .code pre .v { color: #ffc078; }
+
+  /* CALLOUTS */
+  .box { border-radius: 10px; padding: 1rem 1.25rem; margin: 1.25rem 0; font-size: 0.88rem; border: 1px solid; }
+  .box p { margin: 0.3rem 0; }
+  .box.tip { background: rgba(77,212,172,0.07); border-color: rgba(77,212,172,0.3); }
+  .box.tip .lbl { color: var(--accent); }
+  .box.warn { background: rgba(255,180,84,0.07); border-color: rgba(255,180,84,0.3); }
+  .box.warn .lbl { color: var(--accent3); }
+  .box.note { background: rgba(124,156,255,0.07); border-color: rgba(124,156,255,0.3); }
+  .box.note .lbl { color: var(--accent2); }
+  .box .lbl { font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.4rem; }
+
+  /* TABLES */
+  .tbl-wrap { overflow-x: auto; margin: 1rem 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  th { background: var(--surface2); color: var(--muted); text-align: left; padding: 9px 12px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: #d3d9e2; vertical-align: top; }
+  td code, th code { font-family: var(--mono); font-size: 0.85em; color: var(--accent); }
+
+  /* STEP */
+  .step { display: flex; gap: 1rem; margin: 1.25rem 0; }
+  .step-n {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #0b0d11; font-weight: 700; font-size: 0.8rem;
+    display: flex; align-items: center; justify-content: center; font-family: var(--mono);
+  }
+  .step-body { flex: 1; }
+  .step-body p:first-child { margin-top: 2px; }
+
+  /* ARCH DIAGRAM */
+  .arch { background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; overflow-x: auto; }
+  .arch pre { font-family: var(--mono); font-size: 0.75rem; line-height: 1.5; color: var(--accent); white-space: pre; }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 2rem; }
+
+  a { color: var(--accent2); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="kicker">Guia de Replicação · Documentação Técnica</div>
+    <h1>Agente de IA para Migração<br><span>Informix → SQL Server</span></h1>
+    <p class="sub">Passo a passo completo para reconstruir o pipeline de migração do zero em uma nova estação — Claude Code, Skill, três subagentes especializados e RAG via MCP.</p>
+    <div class="meta-row">
+      <div><b>Arquitetura:</b> Claude Code + Skill + Subagents + RAG/MCP</div>
+      <div><b>Custo de API:</b> zero (assinatura)</div>
+      <div><b>SO alvo:</b> Windows 11 + WSL2</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="toc">
+    <h2>Conteúdo</h2>
+    <ol>
+      <li><a href="#visao">Visão geral da arquitetura</a></li>
+      <li><a href="#prereq">Pré-requisitos e verificação do ambiente</a></li>
+      <li><a href="#estrutura">Estrutura de pastas e ambiente Python</a></li>
+      <li><a href="#docker">Infraestrutura: Docker (ChromaDB + Redis)</a></li>
+      <li><a href="#claudecode">Claude Code: instalação e login</a></li>
+      <li><a href="#claudemd">O CLAUDE.md (orquestrador)</a></li>
+      <li><a href="#skill">O Skill (regras técnicas)</a></li>
+      <li><a href="#rag">O RAG: indexação e MCP server</a></li>
+      <li><a href="#subagents">Os três subagentes</a></li>
+      <li><a href="#pipeline">Orquestração e teste do pipeline</a></li>
+      <li><a href="#uso">Uso no dia a dia e manutenção</a></li>
+    </ol>
+  </div>
+
+  <!-- ===== 1. VISÃO GERAL ===== -->
+  <section id="visao">
+    <div class="sec-head">
+      <div class="sec-num">01</div>
+      <h2>Visão geral da arquitetura</h2>
+    </div>
+    <p>O sistema é um <strong>pipeline de migração</strong> de código Informix para SQL Server (T-SQL) em aplicações C#/.NET legadas. Ele roda dentro do <strong>Claude Code</strong>, autenticado pela assinatura (sem consumo de créditos de API), e combina quatro peças que se complementam.</p>
+
+    <div class="arch"><pre>┌──────────────────────────────────────────────────────────────┐
+│  CLAUDE CODE  (assinatura — sem billing)                     │
+│                                                              │
+│  CLAUDE.md ............... ORQUESTRADOR (identidade + fluxo)  │
+│     └ seção 5.5: pipeline automático                         │
+│                                                              │
+│  Skill "regras-conversao-informix" .. FONTE ÚNICA de regras  │
+│     (carrega sob demanda — progressive disclosure)           │
+│                                                              │
+│  Subagentes (.claude/agents/):                               │
+│     ├ informix-analyzer   (Haiku)  .. triagem                │
+│     ├ informix-converter  (Sonnet) .. conversão + RAG        │
+│     └ informix-validator  (Sonnet) .. revisão independente   │
+│                                                              │
+│  RAG:  ChromaDB (Docker) ── MCP server ── ferramenta         │
+│        "buscar_exemplos_migracao"                            │
+└──────────────────────────────────────────────────────────────┘
+
+FLUXO:  "migre X"  →  analyzer  →  converter  →  validator  →  consolida</pre></div>
+
+    <h3>O papel de cada peça</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Peça</th><th>Responsabilidade</th><th>Onde vive</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CLAUDE.md</strong></td><td>Identidade do agente + orquestração do pipeline. Não contém regras técnicas nem consulta RAG.</td><td>Raiz do projeto</td></tr>
+        <tr><td><strong>Skill</strong></td><td>Todas as regras técnicas de conversão (funções, tipos, schemas, DataReader). Fonte única, carregada só quando necessária.</td><td><code>.claude/skills/</code></td></tr>
+        <tr><td><strong>analyzer</strong></td><td>Triagem barata: o arquivo tem Informix? o quê? Modelo leve (Haiku).</td><td><code>.claude/agents/</code></td></tr>
+        <tr><td><strong>converter</strong></td><td>Aplica as conversões. Usa o Skill + consulta o RAG. Modelo forte (Sonnet).</td><td><code>.claude/agents/</code></td></tr>
+        <tr><td><strong>validator</strong></td><td>Revisão independente da conversão, contra o Skill. Modelo forte (Sonnet).</td><td><code>.claude/agents/</code></td></tr>
+        <tr><td><strong>RAG</strong></td><td>Memória de exemplos de conversão já validados. Busca por similaridade.</td><td>ChromaDB (Docker) + MCP</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="box note"><span class="lbl">Princípio de design</span>
+      <p><strong>CLAUDE.md</strong> = quem o agente é e como responde (identidade). <strong>Skill</strong> = como converter cada construção (conhecimento técnico). <strong>Subagentes</strong> = execução isolada por especialidade. <strong>RAG</strong> = experiência acumulada. Separar essas camadas mantém cada parte enxuta e substituível.</p>
+    </div>
+  </section>
+
+  <!-- ===== 2. PRÉ-REQUISITOS ===== -->
+  <section id="prereq">
+    <div class="sec-head">
+      <div class="sec-num">02</div>
+      <h2>Pré-requisitos e verificação do ambiente</h2>
+    </div>
+    <p>Antes de instalar qualquer coisa, verifique o que já existe na máquina. Abra o <strong>PowerShell</strong> e rode cada comando:</p>
+
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span><span class="file">verificação</span></div>
+      <pre>python --version      <span class="c"># precisa 3.11+</span>
+node --version        <span class="c"># precisa 18+</span>
+npm --version
+git --version         <span class="c"># recomendado</span>
+docker --version      <span class="c"># Docker Desktop</span>
+wsl -l -v             <span class="c"># WSL2 (para o Docker no Windows)</span></pre>
+    </div>
+
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Ferramenta</th><th>Versão mínima</th><th>Para quê</th></tr></thead>
+      <tbody>
+        <tr><td>Python</td><td>3.11+</td><td>Indexação do RAG e o MCP server</td></tr>
+        <tr><td>Node.js + npm</td><td>18+</td><td>Base do Claude Code</td></tr>
+        <tr><td>Git</td><td>qualquer recente</td><td>Versionamento do projeto</td></tr>
+        <tr><td>Docker Desktop</td><td>recente</td><td>Rodar ChromaDB e Redis</td></tr>
+        <tr><td>WSL2</td><td>versão 2</td><td>Backend do Docker no Windows</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="box warn"><span class="lbl">Docker no Windows</span>
+      <p>O Docker Desktop depende do <strong>WSL2</strong>. Se <code class="inline">wsl -l -v</code> não mostrar uma distro na versão 2, rode <code class="inline">wsl --install</code> (pode pedir reinício). Na instalação do Docker Desktop, mantenha marcada a opção <strong>"Use WSL 2 instead of Hyper-V"</strong>. O Docker Desktop precisa estar <strong>aberto e rodando</strong> (ícone da balsa estável) para os comandos <code class="inline">docker</code> funcionarem.</p>
+    </div>
+
+    <p>Teste final do Docker, que confirma tudo de ponta a ponta:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>docker run hello-world   <span class="c"># deve imprimir "Hello from Docker!"</span></pre>
+    </div>
+  </section>
+
+  <!-- ===== 3. ESTRUTURA ===== -->
+  <section id="estrutura">
+    <div class="sec-head">
+      <div class="sec-num">03</div>
+      <h2>Estrutura de pastas e ambiente Python</h2>
+    </div>
+    <p>Escolha onde criar o projeto (ex.: <code class="inline">Documents</code>) e monte a estrutura de pastas:</p>
+
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span><span class="file">criar estrutura</span></div>
+      <pre>cd $HOME\Documents
+mkdir migration-agent
+cd migration-agent
+
+mkdir agents, mcp_servers, rag, config
+mkdir rag\knowledge_base
+mkdir rag\knowledge_base\examples
+mkdir data
+mkdir data\raw, data\output</pre>
+    </div>
+
+    <h3>Ambiente virtual Python</h3>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>python -m venv venv
+venv\Scripts\activate     <span class="c"># o prompt passa a mostrar (venv)</span></pre>
+    </div>
+
+    <div class="box tip"><span class="lbl">Se o venv não ativar</span>
+      <p>O PowerShell pode bloquear scripts. Rode uma vez (afeta só a sessão atual): <code class="inline">Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process</code> e tente ativar de novo.</p>
+    </div>
+
+    <h3>Dependências Python</h3>
+    <p>Com o <code class="inline">(venv)</code> ativo:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>pip install --upgrade pip
+pip install chromadb sentence-transformers
+pip install "mcp[cli]"
+pip install python-dotenv</pre>
+    </div>
+
+    <div class="box note"><span class="lbl">Nota</span>
+      <p>O <code class="inline">sentence-transformers</code> é pesado (traz PyTorch); a primeira instalação demora. Para os arquivos <code class="inline">config</code> e <code class="inline">rag</code> serem reconhecidos como pacotes Python, crie os <code class="inline">__init__.py</code>: <code class="inline">New-Item config\__init__.py -ItemType File</code> e <code class="inline">New-Item rag\__init__.py -ItemType File</code>.</p>
+    </div>
+
+    <h3>Arquivo de configuração central</h3>
+    <p>Crie <code class="inline">config\settings.py</code>. Ele centraliza o modelo de embeddings e a conexão do ChromaDB:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">PYTHON</span><span class="file">config/settings.py</span></div>
+      <pre><span class="k">import</span> os
+<span class="k">from</span> dotenv <span class="k">import</span> load_dotenv
+load_dotenv()
+
+<span class="c"># Modelo de embeddings (local, sem billing). Leve e rápido:</span>
+EMBEDDING_MODEL = <span class="s">"all-MiniLM-L6-v2"</span>
+
+<span class="c"># ChromaDB (Docker)</span>
+CHROMA_HOST = os.getenv(<span class="s">"CHROMA_HOST"</span>, <span class="s">"localhost"</span>)
+CHROMA_PORT = <span class="v">int</span>(os.getenv(<span class="s">"CHROMA_PORT"</span>, <span class="s">"8001"</span>))</pre>
+    </div>
+    <div class="box tip"><span class="lbl">Modelo de embeddings</span>
+      <p>Use <code class="inline">all-MiniLM-L6-v2</code> (~90 MB) para começar: leve e suficiente. Para máxima qualidade em produção com muitos exemplos, troque por <code class="inline">BAAI/bge-m3</code> (~2 GB) — é só mudar esta linha e re-indexar.</p>
+    </div>
+  </section>
+
+  <!-- ===== 4. DOCKER ===== -->
+  <section id="docker">
+    <div class="sec-head">
+      <div class="sec-num">04</div>
+      <h2>Infraestrutura: Docker (ChromaDB + Redis)</h2>
+    </div>
+    <p>O ChromaDB é o banco de vetores do RAG. Crie o <code class="inline">docker-compose.yml</code> na raiz do projeto:</p>
+
+    <div class="code">
+      <div class="code-bar"><span class="lang">YAML</span><span class="file">docker-compose.yml</span></div>
+      <pre><span class="v">services</span>:
+  <span class="v">chromadb</span>:
+    <span class="v">image</span>: chromadb/chroma:latest
+    <span class="v">ports</span>: [<span class="s">"8001:8000"</span>]
+    <span class="v">volumes</span>: [<span class="s">"./data/chroma:/chroma/chroma"</span>]
+  <span class="v">redis</span>:
+    <span class="v">image</span>: redis:7-alpine
+    <span class="v">ports</span>: [<span class="s">"6379:6379"</span>]</pre>
+    </div>
+
+    <p>Suba os containers e confirme:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>docker compose up -d
+docker compose ps        <span class="c"># chromadb e redis devem estar "Up"</span></pre>
+    </div>
+
+    <div class="box warn"><span class="lbl">Lembrete importante</span>
+      <p>Os containers <strong>não sobem sozinhos</strong> ao reiniciar o PC. Sempre que for usar o sistema, rode <code class="inline">docker compose up -d</code> antes. O RAG depende do ChromaDB estar no ar.</p>
+    </div>
+  </section>
+
+  <!-- ===== 5. CLAUDE CODE ===== -->
+  <section id="claudecode">
+    <div class="sec-head">
+      <div class="sec-num">05</div>
+      <h2>Claude Code: instalação e login</h2>
+    </div>
+    <p>O Claude Code é o "motor" onde o agente roda. Instale globalmente via npm:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>npm install -g @anthropic-ai/claude-code
+<span class="c"># abra um terminal NOVO e confirme:</span>
+claude --version</pre>
+    </div>
+
+    <h3>Login pela assinatura</h3>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>cd $HOME\Documents\migration-agent
+claude</pre>
+    </div>
+    <p>Na primeira execução, escolha a opção <strong>"Claude account with subscription"</strong> (não a de API/Console). O navegador abre para autenticar.</p>
+
+    <div class="box warn"><span class="lbl">Atenção à conta no navegador</span>
+      <p>O login usa a sessão ativa do navegador. Se houver várias contas logadas, confirme que está autenticando com a conta que tem a <strong>assinatura</strong> desejada. Para escolher com certeza, use uma janela anônima.</p>
+    </div>
+    <div class="box tip"><span class="lbl">Habilite Code Execution</span>
+      <p>O recurso de <strong>Skills</strong> (seção 07) exige "Code execution and file creation" habilitado. Ative em <strong>claude.ai → Settings → Capabilities</strong> antes de prosseguir.</p>
+    </div>
+  </section>
+
+  <!-- ===== 6. CLAUDE.MD ===== -->
+  <section id="claudemd">
+    <div class="sec-head">
+      <div class="sec-num">06</div>
+      <h2>O CLAUDE.md (orquestrador)</h2>
+    </div>
+    <p>O <code class="inline">CLAUDE.md</code> fica na <strong>raiz</strong> do projeto e é lido automaticamente pelo Claude Code em toda sessão. Ele define a <strong>identidade</strong> do agente e a <strong>orquestração</strong> — não contém as regras técnicas (essas vivem no Skill) nem consulta o RAG (isso é do converter).</p>
+
+    <h3>O que o CLAUDE.md contém</h3>
+    <ul>
+      <li><strong>Papel e contexto</strong>: especialista em migração Informix → SQL Server em C#/.NET legado.</li>
+      <li><strong>Escopo estrito</strong>: só migração, nunca manutenção/refatoração/clean code.</li>
+      <li><strong>Anti-alucinação</strong>: nunca inventar tabelas, colunas, schemas; quando faltar dado, declarar pendência.</li>
+      <li><strong>Formato de resposta</strong> padronizado (Resumo → Validados → Inconsistências → Pendências → Conclusão).</li>
+      <li><strong>Seção 5.5 — Orquestração</strong>: o fluxo do pipeline (ver seção 10 deste guia).</li>
+      <li><strong>Referência ao Skill</strong>: aponta para <code class="inline">regras-conversao-informix</code> como fonte das regras técnicas.</li>
+    </ul>
+
+    <div class="box note"><span class="lbl">Divisão de responsabilidades</span>
+      <p>Regra de ouro: se o conteúdo descreve <strong>quem o agente é / como ele responde</strong> → CLAUDE.md. Se descreve <strong>como converter uma construção específica</strong> → Skill. Se é um <strong>exemplo concreto já resolvido</strong> → RAG.</p>
+    </div>
+
+    <div class="box tip"><span class="lbl">Como recriar o conteúdo</span>
+      <p>O <code class="inline">CLAUDE.md</code> completo (≈310 linhas) acompanha este guia como arquivo separado. Copie-o para a raiz do projeto. Alternativamente, você pode pedir ao próprio Claude Code para gerá-lo a partir da estrutura descrita aqui e depois revisar.</p>
+    </div>
+
+    <p>Após colocar o arquivo, reinicie o Claude Code e teste que ele carregou:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">CLAUDE CODE</span></div>
+      <pre>Segundo as instruções deste projeto, qual é o seu escopo
+e o que você NÃO deve fazer?</pre>
+    </div>
+    <p>Ele deve responder mencionando "migração Informix → SQL Server", "não misturar com manutenção" e "não alterar regra de negócio".</p>
+  </section>
+
+  <!-- ===== 7. SKILL ===== -->
+  <section id="skill">
+    <div class="sec-head">
+      <div class="sec-num">07</div>
+      <h2>O Skill (regras técnicas)</h2>
+    </div>
+    <p>O <strong>Skill</strong> é onde vivem <strong>todas</strong> as regras técnicas de conversão. A vantagem: ele carrega <strong>sob demanda</strong> (progressive disclosure) — só entra no contexto quando uma conversão realmente acontece, mantendo o CLAUDE.md enxuto.</p>
+
+    <h3>Localização e estrutura</h3>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>New-Item -Path .claude\skills\regras-conversao-informix `
+  -ItemType Directory -Force
+<span class="c"># o arquivo vai em:</span>
+<span class="c"># .claude\skills\regras-conversao-informix\SKILL.md</span></pre>
+    </div>
+
+    <h3>Anatomia do SKILL.md</h3>
+    <div class="code">
+      <div class="code-bar"><span class="lang">MARKDOWN</span><span class="file">SKILL.md (frontmatter)</span></div>
+      <pre><span class="c">---</span>
+<span class="v">name</span>: regras-conversao-informix
+<span class="v">description</span>: Regras técnicas de conversão de Informix
+  para SQL Server (T-SQL) em C#/.NET. Use ao analisar,
+  converter ou revisar SQL, DAO, ADO.NET, iBATIS ou EF...
+<span class="c">---</span>
+
+<span class="c"># corpo: as regras de transformação</span></pre>
+    </div>
+
+    <p>O corpo do Skill cobre, em seções: funções SQL (<code class="inline">NVL→ISNULL</code>, <code class="inline">TODAY</code>, <code class="inline">CURRENT</code>, <code class="inline">MATCHES</code>, <code class="inline">SKIP/FIRST</code>, <code class="inline">||</code>), objetos ADO.NET, tipos de dados e a armadilha <code class="inline">BIT vs CHAR</code>, schemas, recuperação de identidade (<code class="inline">SCOPE_IDENTITY</code> e o cuidado com <code class="inline">numeric(38,0)</code>), datas, iBATIS/MyBatis, Entity Framework, e o padrão crítico de leitura do <strong>DataReader</strong>.</p>
+
+    <div class="box tip"><span class="lbl">A description é crucial</span>
+      <p>O campo <code class="inline">description</code> é o que o Claude usa para decidir <em>quando</em> carregar o Skill. Escreva-a listando os gatilhos ("use ao analisar/converter SQL Informix, DAO, ADO.NET..."). Uma boa description garante que o Skill seja acionado na hora certa.</p>
+    </div>
+
+    <div class="box warn"><span class="lbl">Reinício necessário</span>
+      <p>Ao criar o diretório <code class="inline">.claude/skills/</code> pela primeira vez, o Claude Code precisa <strong>reiniciar</strong> para detectá-lo (uma sessão em execução não vê diretórios criados depois do início).</p>
+    </div>
+
+    <p>Teste: peça uma análise que exija regras. Na resposta deve aparecer <code class="inline">Skill(regras-conversao-informix) - Successfully loaded skill</code>.</p>
+  </section>
+
+  <!-- ===== 8. RAG ===== -->
+  <section id="rag">
+    <div class="sec-head">
+      <div class="sec-num">08</div>
+      <h2>O RAG: indexação e MCP server</h2>
+    </div>
+    <p>O RAG (Retrieval-Augmented Generation) é a <strong>memória de exemplos</strong> do projeto. Cada conversão validada vira um exemplo vetorizado no ChromaDB; na hora de converter, o agente busca os mais parecidos. São três componentes: os <strong>exemplos</strong> (JSON), o <strong>indexador</strong> e o <strong>MCP server</strong>.</p>
+
+    <h3>8.1 — Formato dos exemplos</h3>
+    <p>Cada exemplo é um JSON em <code class="inline">rag\knowledge_base\examples\</code>:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">JSON</span><span class="file">exemplo-semente</span></div>
+      <pre>{
+  <span class="v">"id"</span>: <span class="s">"seed_001_nvl_schema"</span>,
+  <span class="v">"categoria"</span>: <span class="s">"funcao_sql"</span>,
+  <span class="v">"tags"</span>: [<span class="s">"NVL"</span>, <span class="s">"ISNULL"</span>, <span class="s">"schema"</span>],
+  <span class="v">"source"</span>: <span class="s">"SELECT NVL(nome, 'SEM NOME') FROM informix.cliente"</span>,
+  <span class="v">"target"</span>: <span class="s">"SELECT ISNULL(nome, 'SEM NOME') FROM dbo.cliente"</span>,
+  <span class="v">"notes"</span>: <span class="s">"NVL é do Informix; usar ISNULL. Schema validar."</span>
+}</pre>
+    </div>
+
+    <h3>8.2 — O indexador</h3>
+    <p>Crie <code class="inline">rag\indexer.py</code>. Ele lê os JSONs, gera embeddings localmente (sem billing) e grava no ChromaDB:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">PYTHON</span><span class="file">rag/indexer.py (essência)</span></div>
+      <pre><span class="k">import</span> json
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">import</span> chromadb
+<span class="k">from</span> sentence_transformers <span class="k">import</span> SentenceTransformer
+<span class="k">from</span> config <span class="k">import</span> settings
+
+<span class="k">def</span> <span class="v">main</span>():
+    model = SentenceTransformer(settings.EMBEDDING_MODEL)
+    client = chromadb.HttpClient(host=settings.CHROMA_HOST,
+                                 port=settings.CHROMA_PORT)
+    col = client.get_or_create_collection(<span class="s">"migration_knowledge"</span>)
+
+    files = <span class="v">list</span>(Path(<span class="s">"rag/knowledge_base/examples"</span>).glob(<span class="s">"*.json"</span>))
+    ids, docs, metas = [], [], []
+    <span class="k">for</span> f <span class="k">in</span> files:
+        ex = json.load(<span class="v">open</span>(f, encoding=<span class="s">"utf-8"</span>))
+        texto = <span class="s">f"ORIGEM:\n{ex['source']}\n\nDESTINO:\n{ex['target']}\n\nNOTAS:\n{ex.get('notes','')}"</span>
+        ids.append(ex[<span class="s">"id"</span>]); docs.append(texto)
+        metas.append({<span class="s">"categoria"</span>: ex.get(<span class="s">"categoria"</span>,<span class="s">""</span>)})
+
+    emb = model.encode(docs).tolist()
+    col.upsert(ids=ids, documents=docs, embeddings=emb, metadatas=metas)
+    <span class="v">print</span>(<span class="s">f"OK: {len(ids)} exemplos. Total: {col.count()}"</span>)
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    main()</pre>
+    </div>
+    <p>Rode <strong>como módulo</strong> (para os imports funcionarem):</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>python -m rag.indexer   <span class="c"># baixa o modelo (1ª vez) e indexa</span></pre>
+    </div>
+
+    <h3>8.3 — O MCP server</h3>
+    <p>O MCP server expõe a busca no ChromaDB como uma <strong>ferramenta</strong> que o Claude Code pode chamar. Crie <code class="inline">mcp_servers\rag_server.py</code>.</p>
+    <div class="box warn"><span class="lbl">Regra crítica do MCP: stdout é sagrado</span>
+      <p>O protocolo MCP usa o <strong>stdout</strong> para trafegar JSON. <strong>Nenhum <code class="inline">print()</code></strong> e nenhum log de biblioteca pode ir para o stdout, ou o handshake quebra (<em>"Invalid JSON"</em>). Por isso o server silencia os logs e usa <strong>lazy loading</strong> (carrega o modelo só na primeira busca), o que também evita timeout na subida.</p>
+    </div>
+    <div class="code">
+      <div class="code-bar"><span class="lang">PYTHON</span><span class="file">mcp_servers/rag_server.py (essência)</span></div>
+      <pre><span class="k">import</span> os, logging
+os.environ[<span class="s">"TRANSFORMERS_VERBOSITY"</span>] = <span class="s">"error"</span>
+os.environ[<span class="s">"HF_HUB_DISABLE_PROGRESS_BARS"</span>] = <span class="s">"1"</span>
+logging.disable(logging.WARNING)   <span class="c"># silencia libs ANTES de importar</span>
+
+<span class="k">import</span> chromadb
+<span class="k">from</span> sentence_transformers <span class="k">import</span> SentenceTransformer
+<span class="k">from</span> mcp.server.fastmcp <span class="k">import</span> FastMCP
+<span class="k">from</span> config <span class="k">import</span> settings
+
+mcp = FastMCP(<span class="s">"rag-migracao-informix"</span>)
+_model = _col = <span class="k">None</span>            <span class="c"># lazy loading</span>
+
+<span class="k">def</span> <span class="v">_ready</span>():
+    <span class="k">global</span> _model, _col
+    <span class="k">if</span> _model <span class="k">is</span> <span class="k">None</span>:
+        _model = SentenceTransformer(settings.EMBEDDING_MODEL)
+        c = chromadb.HttpClient(host=settings.CHROMA_HOST, port=settings.CHROMA_PORT)
+        _col = c.get_or_create_collection(<span class="s">"migration_knowledge"</span>)
+
+<span class="v">@mcp.tool()</span>
+<span class="k">def</span> <span class="v">buscar_exemplos_migracao</span>(trecho_codigo: <span class="v">str</span>, n_resultados: <span class="v">int</span> = 3) -> <span class="v">str</span>:
+    <span class="s">"""Busca exemplos de conversão Informix→SQL Server similares ao trecho."""</span>
+    _ready()
+    <span class="k">if</span> _col.count() == 0:
+        <span class="k">return</span> <span class="s">"Base RAG vazia."</span>
+    n = <span class="v">min</span>(n_resultados, _col.count())
+    emb = _model.encode([trecho_codigo]).tolist()
+    r = _col.query(query_embeddings=emb, n_results=n,
+                   include=[<span class="s">"documents"</span>,<span class="s">"metadatas"</span>,<span class="s">"distances"</span>])
+    <span class="c"># ...formata e retorna os exemplos com % de similaridade...</span>
+    <span class="k">return</span> resultado_formatado
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    mcp.run()</pre>
+    </div>
+
+    <h3>8.4 — Wrapper e registro do MCP</h3>
+    <p>No Windows, crie um <code class="inline">.bat</code> para encapsular a chamada (evita problemas de parsing de argumentos):</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">BAT</span><span class="file">run_rag_server.bat</span></div>
+      <pre><span class="c">@echo off</span>
+cd /d "%~dp0"
+"C:\...\migration-agent\venv\Scripts\python.exe" -m mcp_servers.rag_server</pre>
+    </div>
+    <p>Registre no Claude Code (escopo do projeto):</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>claude mcp add rag-migracao --scope project -- `
+  "C:\...\migration-agent\run_rag_server.bat"
+
+claude mcp list   <span class="c"># deve listar rag-migracao</span></pre>
+    </div>
+    <p>Ao entrar no Claude Code, <strong>aprove</strong> o server (pending approval) e confirme com <code class="inline">/mcp</code> que aparece como <code class="inline">✓ connected</code>.</p>
+
+    <div class="box tip"><span class="lbl">Hábito diário</span>
+      <p>O MCP server pode cair entre sessões e, quando cai, o subagente falha <strong>silenciosamente</strong> (retorna "sem exemplos" em vez de erro). Sempre rode <code class="inline">/mcp</code> no início da sessão para confirmar <code class="inline">connected</code> antes de processar.</p>
+    </div>
+  </section>
+
+  <!-- ===== 9. SUBAGENTES ===== -->
+  <section id="subagents">
+    <div class="sec-head">
+      <div class="sec-num">09</div>
+      <h2>Os três subagentes</h2>
+    </div>
+    <p>Subagentes são arquivos <code class="inline">.md</code> em <code class="inline">.claude\agents\</code>. Cada um roda em <strong>contexto isolado</strong>, com seu próprio modelo e ferramentas. Isso mantém o trabalho pesado (leitura de arquivos, RAG) fora do contexto do principal.</p>
+
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span></div>
+      <pre>New-Item -Path .claude\agents -ItemType Directory -Force</pre>
+    </div>
+
+    <h3>Anatomia de um subagente</h3>
+    <div class="code">
+      <div class="code-bar"><span class="lang">MARKDOWN</span><span class="file">estrutura</span></div>
+      <pre><span class="c">---</span>
+<span class="v">name</span>: identificador-unico
+<span class="v">description</span>: quando o principal deve delegar a este agente
+<span class="v">model</span>: haiku | sonnet        <span class="c"># modelo próprio!</span>
+<span class="v">tools</span>: Read, Grep, ...        <span class="c"># ferramentas permitidas</span>
+<span class="c">---</span>
+
+<span class="c"># corpo = system prompt (a missão do subagente)</span></pre>
+    </div>
+
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Subagente</th><th>model</th><th>tools</th><th>Usa Skill?</th><th>Usa RAG?</th></tr></thead>
+      <tbody>
+        <tr><td><code>informix-analyzer</code></td><td>haiku</td><td>Read, Grep, Glob</td><td>não</td><td>não</td></tr>
+        <tr><td><code>informix-converter</code></td><td>sonnet</td><td>Read, MCP do RAG</td><td>sim</td><td>sim</td></tr>
+        <tr><td><code>informix-validator</code></td><td>sonnet</td><td>Read</td><td>sim</td><td>não</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>9.1 — analyzer (triagem)</h4>
+    <p>Classifica em <code class="inline">PRECISA_MIGRACAO</code> / <code class="inline">JA_SQLSERVER</code> / <code class="inline">SEM_BANCO</code> e cataloga o que muda, em alto nível. <strong>Não</strong> converte. Modelo leve (Haiku) porque é tarefa de alto volume. Saída curta e estruturada, que alimenta a decisão de rota do principal.</p>
+
+    <h4>9.2 — converter (conversão)</h4>
+    <p>Aplica as conversões. No fluxo dele: <strong>(1)</strong> consulta o RAG via <code class="inline">buscar_exemplos_migracao</code>; <strong>(2)</strong> usa o Skill <code class="inline">regras-conversao-informix</code> como fonte das regras; <strong>(3)</strong> produz a conversão com mínima intervenção. A ferramenta MCP é declarada assim no frontmatter:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">YAML</span></div>
+      <pre><span class="v">tools</span>: Read, mcp__rag-migracao__buscar_exemplos_migracao</pre>
+    </div>
+
+    <h4>9.3 — validator (revisão independente)</h4>
+    <p>Recebe uma conversão pronta e a revisa <strong>contra o Skill</strong>, procurando: transformações omitidas, conversões incorretas, regra de negócio alterada, schema assumido sem ressalva, pendências não registradas. Emite veredito <code class="inline">APROVADA</code> / <code class="inline">COM RESSALVAS</code> / <code class="inline">REPROVADA</code>. <strong>Não</strong> usa RAG — revisa contra as regras canônicas, garantindo independência do converter.</p>
+
+    <div class="box note"><span class="lbl">Por que o validator não usa RAG</span>
+      <p>O papel dele é checar contra as <strong>regras</strong> (fonte canônica), não contra exemplos. Se usasse o mesmo RAG do converter, poderia herdar o mesmo viés e concordar com o mesmo erro. Revisar só contra o Skill torna a revisão genuinamente independente.</p>
+    </div>
+
+    <div class="box warn"><span class="lbl">Reinício + verificação</span>
+      <p>Após criar os arquivos, reinicie o Claude Code. O comando <code class="inline">/agents</code> (wizard) foi removido em versões recentes — teste invocando diretamente: <em>"Use o subagente informix-analyzer para triar este trecho: ..."</em>. Para ver as chamadas internas de um subagente em background, use <code class="inline">Ctrl+O</code> para expandir.</p>
+    </div>
+
+    <div class="box tip"><span class="lbl">Limitação de MCP em subagentes</span>
+      <p>Versões antigas do Claude Code não davam acesso a MCP dentro de subagentes. Nas recentes (testado em v2.1.206) <strong>funciona</strong> — o converter consulta o RAG sozinho. Se num ambiente o converter não conseguir usar o RAG, o plano B é deixar o RAG no principal, que consulta e repassa os exemplos ao delegar.</p>
+    </div>
+  </section>
+
+  <!-- ===== 10. PIPELINE ===== -->
+  <section id="pipeline">
+    <div class="sec-head">
+      <div class="sec-num">10</div>
+      <h2>Orquestração e teste do pipeline</h2>
+    </div>
+    <p>A <strong>seção 5.5 do CLAUDE.md</strong> ensina o principal a encadear os três subagentes automaticamente quando você pede uma migração. O fluxo:</p>
+
+    <div class="arch"><pre>Pedido: "migre este arquivo/trecho"
+   │
+   ├─1─▶ informix-analyzer  (triagem)
+   │       └─ PRECISA_MIGRACAO | JA_SQLSERVER | SEM_BANCO
+   │
+   ├─2─▶ decisão de rota:
+   │       JA_SQLSERVER / SEM_BANCO  →  PARA. Reporta "nada a migrar".
+   │       PRECISA_MIGRACAO          →  prossegue.
+   │
+   ├─3─▶ informix-converter  (converte: RAG + Skill)
+   │
+   ├─4─▶ informix-validator  (revisa a conversão)
+   │       └─ APROVADA | COM RESSALVAS | REPROVADA
+   │
+   └─5─▶ principal CONSOLIDA:
+           APROVADA          →  apresenta conversão + ressalvas
+           REPROVADA         →  reporta problema e correção, e PARA
+                                (você decide — sem re-conversão automática)</pre></div>
+
+    <h3>Regras de orquestração (resumo)</h3>
+    <ul>
+      <li><strong>Parada antecipada</strong>: se não há nada a migrar, não chama converter nem validator.</li>
+      <li><strong>Reprovação transparente</strong>: se o validator reprova, reporta e para — você decide o próximo passo (sem loop automático nesta versão).</li>
+      <li><strong>Invocação individual</strong> continua permitida: "só faça a triagem", "use o validator para revisar isto".</li>
+    </ul>
+
+    <h3>Teste do pipeline completo</h3>
+    <p>Confirme o MCP (<code class="inline">/mcp</code> → connected) e peça uma migração <strong>sem</strong> invocar subagentes manualmente:</p>
+    <div class="code">
+      <div class="code-bar"><span class="lang">CLAUDE CODE</span></div>
+      <pre>Migre este trecho:
+
+SELECT FIRST 20 NVL(cliente, 'N/A'), saldo || ' reais'
+FROM informix.conta WHERE atualizado = TODAY</pre>
+    </div>
+    <p>Você deve ver a sequência automática: <code class="inline">● informix-analyzer</code> → <code class="inline">● informix-converter</code> → <code class="inline">● informix-validator</code> → consolidação.</p>
+
+    <div class="box note"><span class="lbl">Expectativa de tempo</span>
+      <p>O pipeline completo (Haiku + 2× Sonnet em sequência) leva alguns minutos por trecho. Para um trecho isolado parece caro; o valor aparece na <strong>escala</strong> — o analyzer barato filtra muitos arquivos e só os que precisam pagam o custo do pipeline. É o padrão que habilita processar pastas inteiras.</p>
+    </div>
+  </section>
+
+  <!-- ===== 11. USO DIÁRIO ===== -->
+  <section id="uso">
+    <div class="sec-head">
+      <div class="sec-num">11</div>
+      <h2>Uso no dia a dia e manutenção</h2>
+    </div>
+
+    <h3>Checklist de início de sessão</h3>
+    <div class="code">
+      <div class="code-bar"><span class="lang">POWERSHELL</span><span class="file">rotina</span></div>
+      <pre>cd $HOME\Documents\migration-agent
+docker compose up -d          <span class="c"># 1. sobe ChromaDB + Redis</span>
+venv\Scripts\activate         <span class="c"># 2. ativa o venv (se for indexar)</span>
+claude                        <span class="c"># 3. abre o Claude Code</span>
+<span class="c"># 4. dentro do Claude Code: /mcp  → confirmar "connected"</span></pre>
+    </div>
+
+    <h3>Loop de melhoria contínua (o RAG cresce)</h3>
+    <p>É o que torna o agente cada vez mais afiado no contexto real:</p>
+    <div class="step"><div class="step-n">1</div><div class="step-body"><p>Use o agente para migrar código real e <strong>valide</strong> a conversão.</p></div></div>
+    <div class="step"><div class="step-n">2</div><div class="step-body"><p>Transforme cada conversão validada num <strong>novo JSON</strong> em <code class="inline">rag\knowledge_base\examples\</code> (source, target, notes).</p></div></div>
+    <div class="step"><div class="step-n">3</div><div class="step-body"><p>Rode <code class="inline">python -m rag.indexer</code> para re-indexar. Os novos exemplos passam a ser consultados.</p></div></div>
+    <div class="step"><div class="step-n">4</div><div class="step-body"><p>Com o tempo, a similaridade melhora e as conversões ficam mais consistentes com o padrão do projeto.</p></div></div>
+
+    <h3>Onde adicionar novos aprendizados</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tipo de aprendizado</th><th>Vai para</th></tr></thead>
+      <tbody>
+        <tr><td>Regra geral nova (ex.: "função X vira Y")</td><td>Skill</td></tr>
+        <tr><td>Exemplo concreto resolvido (source → target)</td><td>RAG (novo JSON)</td></tr>
+        <tr><td>Mudança de comportamento/identidade do agente</td><td>CLAUDE.md</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Versionar tudo com Git</h3>
+    <p>O projeto inteiro deve estar sob controle de versão — é o que permite replicar e compartilhar. Crie um <code class="inline">.gitignore</code> excluindo <code class="inline">venv/</code>, <code class="inline">data/chroma/</code> e <code class="inline">__pycache__/</code>. Versione: <code class="inline">CLAUDE.md</code>, <code class="inline">.claude/</code> (skills e agents), <code class="inline">mcp_servers/</code>, <code class="inline">rag/</code> (indexer + exemplos), <code class="inline">config/</code>, <code class="inline">docker-compose.yml</code> e este guia.</p>
+
+    <div class="box tip"><span class="lbl">Para replicar em outra máquina</span>
+      <p>Clone o repositório e siga as seções 02 a 09 deste guia. Os arquivos de configuração (CLAUDE.md, SKILL.md, subagentes, rag_server.py, exemplos) já vêm no repositório — resta instalar os pré-requisitos, subir o Docker, indexar o RAG (<code class="inline">python -m rag.indexer</code>), registrar o MCP e logar no Claude Code.</p>
+    </div>
+
+    <h3>Solução de problemas comuns</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Sintoma</th><th>Causa provável / solução</th></tr></thead>
+      <tbody>
+        <tr><td>MCP aparece como <code>failed</code></td><td>ChromaDB parado (<code>docker compose up -d</code>) ou <code>print()</code>/log sujando o stdout do server (silenciar logs, lazy loading).</td></tr>
+        <tr><td>Converter diz "RAG sem exemplos"</td><td>MCP caiu na sessão. Reiniciar Claude Code e checar <code>/mcp</code>.</td></tr>
+        <tr><td><code>ModuleNotFoundError: config</code></td><td>Rodar como módulo: <code>python -m rag.indexer</code>, não <code>python rag\indexer.py</code>.</td></tr>
+        <tr><td>Subagente não é encontrado</td><td>Reiniciar o Claude Code após criar arquivos em <code>.claude/</code>.</td></tr>
+        <tr><td>venv não ativa (Windows)</td><td><code>Set-ExecutionPolicy RemoteSigned -Scope Process</code>.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+</div>
+
+<footer>
+  Guia de Replicação — Agente de Migração Informix → SQL Server · Documento técnico interno
+</footer>
+
+</body>
+</html>
